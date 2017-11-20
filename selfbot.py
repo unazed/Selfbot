@@ -38,7 +38,7 @@ class Utils:
 
     @staticmethod
     def should_invite(userid):
-        return not bool(Utils.user_invited(userid) or userid in Items.INV_SET)
+        return not Utils.user_invited(userid) or userid in Items.INV_SET
 
     @staticmethod
     def escape(msg):
@@ -50,7 +50,7 @@ class Utils:
     @staticmethod
     def prefixed(s):
         """Returns s with the global prefix prefix"""
-        return "{}{}".format(Settings.PREFIX, s)
+        return "%s%s" % (Settings.PREFIX, s)
 
     @staticmethod
     def trycast(new_type, value, default=None):
@@ -75,9 +75,11 @@ async def worker(queue, coro, count:int=1, delay:float=1.0, loop:asyncio.Abstrac
     """Creates an asynchronous worker task. Sort of simulates how I imagine an async pool would look"""
     if count <= 0:
         raise RuntimeError("count must be > 0")
+
     loop = loop or asyncio.get_event_loop()
     tasks = []
-    while True:
+
+    while 1:
         while len(tasks) < count and not queue.empty():
             tmp_args, tmp_kwargs = await queue.get()
             tasks.append(coro(*tmp_args, **tmp_kwargs))
@@ -89,7 +91,7 @@ async def worker(queue, coro, count:int=1, delay:float=1.0, loop:asyncio.Abstrac
 class Commands:
     @staticmethod
     async def tag(message, args):
-        if not len(args):
+        if not args:
             return
 
         MAX_LEN = 1500
@@ -105,8 +107,8 @@ class Commands:
         for item in items:
             if len(cur_msg) + len(item.mention) + 1 >= MAX_LEN:
                 await client.send_message(message.channel, cur_msg)
-                cur_msg = ""
-            cur_msg += item.mention + " "
+                cur_msg = ''
+            cur_msg += item.mention + ' '
         if cur_msg:
             await client.send_message(message.channel, cur_msg)
 
@@ -145,10 +147,10 @@ class Commands:
                 if mentions is None or msg.author in mentions:
                     await client.delete_message(msg)
                     cnt -= 1
-                if cnt == 0:
+                if not cnt:
                     break
-            except Exception as e:
-                print(e)
+            except Exception as exc:
+                print(exc)
 
     @staticmethod
     async def purge(message, args):
@@ -156,13 +158,13 @@ class Commands:
         if cnt <= 0:
             return
         async for msg in client.logs_from(message.channel, limit=9999):
-            if cnt == 0:
+            if not cnt:
                 break
             if msg.author == client.user:
                 try:
                     await client.delete_message(msg)
-                except Exception as e:
-                    print(e)
+                except Exception as exc:
+                    print(exc)
                 cnt -= 1
 
     @staticmethod
@@ -201,7 +203,7 @@ def cmd(message, command):
 
 def cmd_args(message, command):
     assert cmd(message, command)
-    return [] if ' ' not in message.content else message.content.split(' ')[1:]
+    return message.content.split()[1:]
 
 async def handle(command, message, coro):
     "A coroutine that handles commands by executing the provided coro"
@@ -222,7 +224,7 @@ async def selfbot_private_message(message):
     await handle("purge", message, Commands.purge)
     await handle("avatar", message, Commands.avatar)
     await handle("react", message, Commands.react)
-    if Settings.DELETE_CMD is True:
+    if Settings.DELETE_CMD:
         await Commands.purge(message, ("1",))
 
 async def selfbot_server_message(message):
@@ -235,7 +237,7 @@ async def selfbot_server_message(message):
     await handle("typing", message, Commands.typing)
     await handle("tag", message, Commands.tag)
     await handle("react", message, Commands.react)
-    if Settings.DELETE_CMD is True:
+    if Settings.DELETE_CMDe:
         await Commands.purge(message, ("1",))
 
 @client.event
@@ -250,7 +252,6 @@ async def on_message(message):
         if message.author == client.user:
             await selfbot_private_message(message)
         await private_message(message)
-    return True
 
 @client.event
 async def on_ready():
